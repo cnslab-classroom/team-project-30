@@ -7,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import com.example.util.DBConnection;
+
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -16,6 +18,11 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.scene.Node;
 import org.springframework.web.client.RestTemplate;
+
+// For reviews
+import java.util.List;
+import java.util.ArrayList;
+import com.example.controller.ReviewController.Review;
 
 public class MainController {
     private Stage stage;
@@ -490,6 +497,7 @@ public class MainController {
 
             // 검색 결과를 저장
             while (resultSet.next()) {
+                int book_id = resultSet.getInt("book_id");
                 String bookTitle = resultSet.getString("title");
                 String bookAuthor = resultSet.getString("author");
                 String bookGenre = resultSet.getString("genre");
@@ -498,8 +506,8 @@ public class MainController {
                 int bookStock = resultSet.getInt("stock");
 
                 // 하나의 결과 문자열로 저장
-                String resultText = String.format("%s;%s;%s;%,d;%.1f;%,d",
-                        bookTitle, bookAuthor, bookGenre, bookPrice, bookRating, bookStock);
+                String resultText = String.format("%d;%s;%s;%s;%,d;%.1f;%,d",
+                    book_id, bookTitle, bookAuthor, bookGenre, bookPrice, bookRating, bookStock);
 
                 resultListView.getItems().add(resultText);
             }
@@ -516,12 +524,13 @@ public class MainController {
                     } else {
                         // 데이터를 분리 (세미콜론으로 구분된 데이터)
                         String[] parts = item.split(";");
-                        String title = parts[0];
-                        String author = parts[1];
-                        String genre = parts[2];
-                        String price = parts[3];
-                        String rating = parts[4];
-                        String stock = parts[5];
+                        int book_id = Integer.parseInt(parts[0]);
+                        String title = parts[1];
+                        String author = parts[2];
+                        String genre = parts[3];
+                        String price = parts[4];
+                        String rating = parts[5];
+                        String stock = parts[6];
 
                         // HBox 레이아웃 생성
                         HBox hBox = new HBox(10); // 10px 간격
@@ -552,6 +561,13 @@ public class MainController {
                         // 레이아웃 추가
                         hBox.getChildren().addAll(titleLabel, infoLabel);
 
+                        // 클릭 시 상세 정보 창 열기
+                        setOnMouseClicked(event -> {
+                            if (!empty) {
+                                openBookDetailWindow(book_id, title, author, genre, price, rating);
+                            }
+                        });
+
                         // 그래픽으로 설정
                         setGraphic(hBox);
                     }
@@ -564,7 +580,45 @@ public class MainController {
         }
     }
 
+    private void openBookDetailWindow(int book_id, String title, String author, String genre, String price, String rating) {
+        ReviewController review = new ReviewController();
+
+        // 새로운 Stage(창) 생성
+        Stage bookDetailStage = new Stage();
+        bookDetailStage.setTitle("책 상세 정보");
+
+        // VBox 레이아웃 생성
+        VBox vBox = new VBox(10); // 10px 간격
+        vBox.setPadding(new Insets(20));
+
+        // 책 정보 표시
+        Label titleLabel = new Label("제목: " + title);
+        Label authorLabel = new Label("저자: " + author);
+        Label genreLabel = new Label("장르: " + genre);
+        Label priceLabel = new Label("가격: " + price + " 원");
+        Label ratingLabel = new Label("평점: " + rating);
+
+        // 리뷰 영역 (여기서는 더미 데이터를 사용)
+        Label reviewTitle = new Label("리뷰:");
+        ListView<Review> reviewListView = new ListView<>();
+        ObservableList<Review> reviews = review.getReviewsForBook(book_id);  // 해당 책의 리뷰 가져오기
+        reviewListView.setItems(reviews); 
+
+        // 새 창에 구성 요소 추가
+        vBox.getChildren().addAll(titleLabel, authorLabel, genreLabel, priceLabel, ratingLabel, reviewTitle, reviewListView);
+
+        // Scene 생성
+        Scene scene = new Scene(vBox, 400, 300);
+        bookDetailStage.setScene(scene);
+
+        // 창 보이기
+        bookDetailStage.show();
+    }
+
     public void show() {
+        String query = buildSearchQuery();
+        executeSearchQuery(query);
+
         stage.show();
     }
 }
