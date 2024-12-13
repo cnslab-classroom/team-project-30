@@ -16,7 +16,6 @@ import javafx.scene.image.*;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-// import javafx.scene.Node;
 import org.springframework.web.client.RestTemplate;
 
 // For reviews
@@ -27,11 +26,11 @@ public class MainController {
     private int clientNumber;
     private String serverUrl = "http://localhost:8080";
     private HBox headerBox;
-    private Button infoButton;  // infoButton을 변수로 선언
+    private Button infoButton;
     private Button bucketButton;
     private ListView<String> resultListView;
-    
- // ComboBox와 TextField를 클래스의 인스턴스 변수로 선언
+
+    // ComboBox와 TextField를 클래스의 인스턴스 변수로 선언
     private ComboBox<String> genreComboBox;
     private ComboBox<String> rateComboBox;
     private ComboBox<String> searchComboBox;
@@ -40,7 +39,7 @@ public class MainController {
     public MainController() {
         initialize();
     }
-    
+
     public void testServerConnection() {
         RestTemplate restTemplate = new RestTemplate();
         String response = restTemplate.getForObject(serverUrl + "/test", String.class);
@@ -60,7 +59,7 @@ public class MainController {
     private void loadClientInfo() {
         String query = "SELECT clientname, balance FROM client WHERE clientnumber = ?";
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(query)) {
+                PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setInt(1, clientNumber);
 
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -95,7 +94,7 @@ public class MainController {
             infoButton.setText(clientName + "    " + balance + " 원");
         }
     }
-    
+
     private String buildSearchQuery() {
         String genre = genreComboBox.getValue();
         String rate = rateComboBox.getValue();
@@ -112,11 +111,26 @@ public class MainController {
             double minRating = 0;
             double maxRating = 5;
             switch (rate) {
-                case "1": minRating = 0; maxRating = 2; break;
-                case "2": minRating = 2; maxRating = 3; break;
-                case "3": minRating = 3; maxRating = 4; break;
-                case "4": minRating = 4; maxRating = 5; break;
-                case "5": minRating = 5; maxRating = 5; break;
+                case "1":
+                    minRating = 0;
+                    maxRating = 2;
+                    break;
+                case "2":
+                    minRating = 2;
+                    maxRating = 3;
+                    break;
+                case "3":
+                    minRating = 3;
+                    maxRating = 4;
+                    break;
+                case "4":
+                    minRating = 4;
+                    maxRating = 5;
+                    break;
+                case "5":
+                    minRating = 5;
+                    maxRating = 5;
+                    break;
             }
             queryBuilder.append(" AND rating BETWEEN ").append(minRating).append(" AND ").append(maxRating);
         }
@@ -131,7 +145,7 @@ public class MainController {
 
         return queryBuilder.toString();
     }
-    
+
     private void initialize() {
         AnchorPane mainPane = new AnchorPane();
         mainPane.setPrefSize(1200, 750);
@@ -156,43 +170,43 @@ public class MainController {
         AnchorPane.setTopAnchor(searchBox, 52.0);
         AnchorPane.setLeftAnchor(searchBox, 200.0);
         AnchorPane.setRightAnchor(searchBox, 0.0);
-        
+
         VBox resultBox = createResultBox();
         mainPane.getChildren().add(resultBox);
         AnchorPane.setTopAnchor(resultBox, 108.0);
         AnchorPane.setLeftAnchor(resultBox, 210.0);
         AnchorPane.setRightAnchor(resultBox, 10.0);
         AnchorPane.setBottomAnchor(resultBox, 10.0);
-        
+
         // infoButton 클릭 시 InfoController에서 새 창 열기
         infoButton.setOnAction(e -> {
             InfoController infoController = new InfoController(clientNumber);
             infoController.setBalanceUpdateListener(() -> updateBalance());
             infoController.showInfoWindow();
         });
-        
+
         // 장바구니 버튼 클릭 시 장바구니 창 열기
         bucketButton.setOnAction(e -> {
             Stage bucketStage = new Stage();
             bucketStage.setTitle("장바구니");
-            
+
             // 빈 레이아웃 설정
             VBox bucketLayout = new VBox();
             bucketLayout.setPadding(new Insets(10));
             bucketLayout.setSpacing(10);
-            
+
             // ListView 초기화
             ListView<String> bucketListView = new ListView<>();
             bucketListView.setPrefHeight(400);
 
             // 장바구니 데이터 로드
             loadBucketData(bucketListView);
-            
+
             HBox deleteBox = new HBox();
             deleteBox.setSpacing(10);
             deleteBox.setAlignment(Pos.TOP_RIGHT);
             Button deleteAllButton = new Button("삭제");
-            
+
             // 전체 삭제 버튼 클릭 시
             deleteAllButton.setOnAction(event -> {
                 try (Connection connection = DBConnection.getConnection("bookflow_db")) {
@@ -214,7 +228,6 @@ public class MainController {
             });
 
             deleteBox.getChildren().addAll(deleteAllButton);
-            
             deleteAllButton.setPrefWidth(200);
 
             // 장바구니 씬 설정
@@ -224,11 +237,11 @@ public class MainController {
 
             // 모달 설정 (기존 창 조작 불가)
             bucketStage.initModality(Modality.APPLICATION_MODAL);
-            
+
             // 장바구니 레이아웃에 ListView 추가
             bucketLayout.getChildren().addAll(bucketListView, deleteBox);
 
-            bucketStage.showAndWait(); // showAndWait을 사용하여 창 닫힘 후에 코드 실행           
+            bucketStage.showAndWait(); // showAndWait을 사용하여 창 닫힘 후에 코드 실행
         });
 
         Scene scene = new Scene(mainPane);
@@ -237,28 +250,28 @@ public class MainController {
         stage.setScene(scene);
         stage.setResizable(false);
     }
-    
+
     private void loadBucketData(ListView<String> bucketListView) {
         bucketListView.getItems().clear(); // 기존 목록 비우기
 
         try (Connection connection = DBConnection.getConnection("bookflow_db")) {
             String query = "SELECT b.book_id, b.title, bt.quantity, b.price FROM bucket bt " +
-                           "JOIN book b ON bt.book_id = b.book_id WHERE bt.clientnumber = ?";
+                    "JOIN book b ON bt.book_id = b.book_id WHERE bt.clientnumber = ?";
             try (PreparedStatement statement = connection.prepareStatement(query)) {
                 statement.setInt(1, clientNumber); // 클라이언트 번호 설정
                 ResultSet rs = statement.executeQuery();
 
                 while (rs.next()) {
-                    int bookId = rs.getInt("book_id");  // 책 ID
-                    String bookTitle = rs.getString("title");  // 책 제목
-                    int quantity = rs.getInt("quantity");  // 수량
-                    double price = rs.getDouble("price");  // 가격
-                    double total = quantity * price;  // 총액
+                    int bookId = rs.getInt("book_id"); // 책 ID
+                    String bookTitle = rs.getString("title"); // 책 제목
+                    int quantity = rs.getInt("quantity"); // 수량
+                    double price = rs.getDouble("price"); // 가격
+                    double total = quantity * price; // 총액
 
                     // 항목 내용 만들기 (bookId 포함)
                     String itemText = String.format("%s - %d | 수량: %d | 가격: %, .0f 원 | 총액: %, .0f 원",
                             bookTitle, bookId, quantity, price, total);
-                    
+
                     bucketListView.getItems().add(itemText); // ListView에 항목 추가
                 }
             }
@@ -266,7 +279,6 @@ public class MainController {
             e.printStackTrace();
         }
     }
-
 
     private HBox createHeaderBox() {
         HBox headerBox = new HBox();
@@ -284,7 +296,7 @@ public class MainController {
 
         bucketButton = new Button("장바구니");
         Button buyLogButton = new Button("구매내역");
-        infoButton = new Button("아이디, 잔액");  // infoButton을 변수로 선언
+        infoButton = new Button("아이디, 잔액");
 
         bucketButton.setPrefHeight(30);
         bucketButton.setPrefWidth(150);
@@ -310,7 +322,7 @@ public class MainController {
         suggestBox.setStyle("-fx-background-color: #e0e0e0;");
         return suggestBox;
     }
-    
+
     private VBox createResultBox() {
         VBox resultBox = new VBox();
         resultBox.setAlignment(Pos.TOP_RIGHT);
@@ -337,7 +349,7 @@ public class MainController {
         addBucketButton.setOnAction(e -> {
             // 선택된 책 정보 가져오기
             String selectedBookText = resultListView.getSelectionModel().getSelectedItem();
-            
+
             if (selectedBookText == null) {
                 // 책을 선택하지 않으면 경고 메시지 표시
                 showAlert("오류", "책을 선택해주세요.");
@@ -383,22 +395,22 @@ public class MainController {
 
         return resultBox;
     }
-    
+
     // 장바구니에 책 추가하는 메서드
     private void addToCart(String bookTitle, int quantity) {
         // 먼저 책 제목을 통해 book_id를 조회해야 함
         String getBookIdQuery = "SELECT book_id, price FROM book WHERE title = ?";
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(getBookIdQuery)) {
-            
-            statement.setString(1, bookTitle);  // 책 제목을 파라미터로 설정
+                PreparedStatement statement = connection.prepareStatement(getBookIdQuery)) {
+
+            statement.setString(1, bookTitle); // 책 제목을 파라미터로 설정
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    int bookId = resultSet.getInt("book_id");  // 책 ID
-                    double bookPrice = resultSet.getDouble("price");  // 책 가격
-                    
+                    int bookId = resultSet.getInt("book_id"); // 책 ID
+                    double bookPrice = resultSet.getDouble("price"); // 책 가격
+
                     // 책을 찾았다면, bucket 테이블에 추가
-                    addBookToBucket(bookTitle, bookId, quantity, bookPrice);  // bookTitle을 추가
+                    addBookToBucket(bookTitle, bookId, quantity, bookPrice); // bookTitle을 추가
                 } else {
                     // 책을 찾을 수 없으면 알림
                     showAlert("오류", "책을 찾을 수 없습니다.");
@@ -409,17 +421,17 @@ public class MainController {
             e.printStackTrace();
         }
     }
-    
+
     // bucket 테이블에 책을 추가하는 메서드
     private void addBookToBucket(String bookTitle, int bookId, int quantity, double price) {
         String insertQuery = "INSERT INTO bucket (clientnumber, book_id, quantity, price) VALUES (?, ?, ?, ?)";
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(insertQuery)) {
-            
-            statement.setInt(1, clientNumber);  // 현재 클라이언트 번호
-            statement.setInt(2, bookId);  // 책 ID
-            statement.setInt(3, quantity);  // 수량
-            statement.setDouble(4, price);  // 가격
+                PreparedStatement statement = connection.prepareStatement(insertQuery)) {
+
+            statement.setInt(1, clientNumber); // 현재 클라이언트 번호
+            statement.setInt(2, bookId); // 책 ID
+            statement.setInt(3, quantity); // 수량
+            statement.setDouble(4, price); // 가격
 
             int rowsAffected = statement.executeUpdate();
             if (rowsAffected > 0) {
@@ -432,7 +444,7 @@ public class MainController {
             e.printStackTrace();
         }
     }
-    
+
     // 알림을 표시하는 메서드 (Alert Dialog 사용)
     private void showAlert(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -448,7 +460,8 @@ public class MainController {
 
         // ComboBox와 TextField를 클래스 인스턴스 변수로 초기화
         genreComboBox = new ComboBox<>();
-        genreComboBox.getItems().addAll("장르", "판타지", "SF", "로맨스", "미스터리", "공포", "역사", "청소년", "자기계발", "과학", "철학", "종교", "예술", "에세이", "여행", "요리", "교육");
+        genreComboBox.getItems().addAll("장르", "판타지", "SF", "로맨스", "미스터리", "공포", "역사", "청소년", "자기계발", "과학", "철학", "종교",
+                "예술", "에세이", "여행", "요리", "교육");
         genreComboBox.setValue("장르");
         genreComboBox.setPrefWidth(100);
 
@@ -484,11 +497,11 @@ public class MainController {
 
         return searchBox;
     }
-    
+
     private void executeSearchQuery(String query) {
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(query);
-             ResultSet resultSet = statement.executeQuery()) {
+                PreparedStatement statement = connection.prepareStatement(query);
+                ResultSet resultSet = statement.executeQuery()) {
 
             // ListView 초기화 (기존 검색 결과 제거)
             resultListView.getItems().clear();
@@ -505,7 +518,7 @@ public class MainController {
 
                 // 하나의 결과 문자열로 저장
                 String resultText = String.format("%d;%s;%s;%s;%,d;%.1f;%,d",
-                    book_id, bookTitle, bookAuthor, bookGenre, bookPrice, bookRating, bookStock);
+                        book_id, bookTitle, bookAuthor, bookGenre, bookPrice, bookRating, bookStock);
 
                 resultListView.getItems().add(resultText);
             }
@@ -578,7 +591,8 @@ public class MainController {
         }
     }
 
-    private void openBookDetailWindow(int book_id, String title, String author, String genre, String price, String rating) {
+    private void openBookDetailWindow(int book_id, String title, String author, String genre, String price,
+            String rating) {
         ReviewController review = new ReviewController();
 
         // 새로운 Stage(창) 생성
@@ -599,11 +613,12 @@ public class MainController {
         // 리뷰 영역 (여기서는 더미 데이터를 사용)
         Label reviewTitle = new Label("리뷰:");
         ListView<Review> reviewListView = new ListView<>();
-        ObservableList<Review> reviews = review.getReviewsForBook(book_id);  // 해당 책의 리뷰 가져오기
-        reviewListView.setItems(reviews); 
+        ObservableList<Review> reviews = review.getReviewsForBook(book_id); // 해당 책의 리뷰 가져오기
+        reviewListView.setItems(reviews);
 
         // 새 창에 구성 요소 추가
-        vBox.getChildren().addAll(titleLabel, authorLabel, genreLabel, priceLabel, ratingLabel, reviewTitle, reviewListView);
+        vBox.getChildren().addAll(titleLabel, authorLabel, genreLabel, priceLabel, ratingLabel, reviewTitle,
+                reviewListView);
 
         // Scene 생성
         Scene scene = new Scene(vBox, 400, 300);
