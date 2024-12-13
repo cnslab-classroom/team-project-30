@@ -16,12 +16,10 @@ import javafx.scene.image.*;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.scene.Node;
+// import javafx.scene.Node;
 import org.springframework.web.client.RestTemplate;
 
 // For reviews
-import java.util.List;
-import java.util.ArrayList;
 import com.example.controller.ReviewController.Review;
 
 public class MainController {
@@ -276,7 +274,7 @@ public class MainController {
         headerBox.setPadding(new Insets(10));
         headerBox.setStyle("-fx-background-color: #f4f4f4; -fx-border-color: #cccccc;");
 
-        Image logo = new Image("file:src/main/resources/images/logo.png");
+        Image logo = new Image(getClass().getResource("/images/logo.png").toExternalForm());
         ImageView logoView = new ImageView(logo);
         logoView.setFitWidth(170);
         logoView.setFitHeight(50);
