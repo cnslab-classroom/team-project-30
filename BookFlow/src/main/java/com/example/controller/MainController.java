@@ -780,7 +780,7 @@ mainPane.getChildren().addAll(recommendationsListView);
                         String author = parts[2];
                         String genre = parts[3];
                         String price = parts[4];
-                        String rating = parts[5];
+                        Double rating = Double.parseDouble(parts[5]);
                         String stock = parts[6];
 
                         // HBox 레이아웃 생성
@@ -832,7 +832,7 @@ mainPane.getChildren().addAll(recommendationsListView);
     }
 
     private void openBookDetailWindow(int book_id, String title, String author, String genre, String price,
-            String rating) {
+            Double rating) {
         ReviewController review = new ReviewController();
 
         // 새로운 Stage(창) 생성
@@ -853,6 +853,7 @@ mainPane.getChildren().addAll(recommendationsListView);
         // 리뷰 영역 (여기서는 더미 데이터를 사용)
         Label reviewTitle = new Label("리뷰:");
         ListView<Review> reviewListView = new ListView<>();
+        System.out.println("TEST1");
         ObservableList<Review> reviews = review.getReviewsForBook(book_id); // 해당 책의 리뷰 가져오기
         reviewListView.setItems(reviews);
 

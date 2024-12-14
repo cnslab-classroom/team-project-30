@@ -20,7 +20,7 @@ public class ReviewController {
     public static class Review {
         private String clientName;
         private String reviewContent;
-        private double rating;
+        private Double rating;
         private Timestamp reviewDate;
 
         public Review(String clientName, String reviewContent, double rating, Timestamp reviewDate) {
