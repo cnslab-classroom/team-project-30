@@ -351,26 +351,27 @@ public class MainController {
             Stage purchaseHistoryStage = new Stage();
             purchaseHistoryStage.setTitle("구매 내역 및 추천");
         
-            // 구매 내역과 추천 책을 표시할 ListView 생성
             ListView<String> purchaseListView = new ListView<>();
             ListView<String> recommendationsListView = new ListView<>();
         
-            // 구매 내역과 추천 책 로드
             loadPurchaseHistoryAndRecommendations(purchaseListView, recommendationsListView);
         
-            // 두 ListView를 레이아웃에 추가
+            // 레이아웃 설정
             VBox layout = new VBox(10);
             layout.setPadding(new Insets(10));
+            layout.setPrefSize(600, 400); // 레이아웃 크기 명시
+        
             layout.getChildren().addAll(
                 new Label("구매 내역"), purchaseListView,
                 new Label("추천 책"), recommendationsListView
             );
         
-            // Stage 설정 및 표시
-            Scene scene = new Scene(layout, 600, 400);
+            Scene scene = new Scene(layout, 600, 400); // Scene 크기 명시
             purchaseHistoryStage.setScene(scene);
+            purchaseHistoryStage.setResizable(false); // 크기 조정 불가
             purchaseHistoryStage.show();
         });
+        
         
         
         // 추천 책 영역 추가
