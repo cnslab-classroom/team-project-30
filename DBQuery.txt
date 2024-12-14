@@ -1,0 +1,137 @@
+지금까지 쓴 쿼리문 모아둔거
+
+use bookflow_db;
+
+CREATE TABLE client(
+   clientnumber INT AUTO_INCREMENT PRIMARY KEY,
+    clientname VARCHAR(50) NOT NULL UNIQUE,
+    pw VARCHAR(255) NOT NULL,
+    balance INT DEFAULT 0,
+    join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE book (
+   book_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    genre ENUM('판타지', 'SF', '로맨스', '미스터리', '공포', '역사', '청소년', '자기계발', '과학', '철학', '종교', '예술', '에세이', '여행', '요리', '교육') NOT NULL,
+    price INT NOT NULL,
+    rating DECIMAL(3,1) CHECK (rating BETWEEN 1.0 AND 5.0),
+    stock INT DEFAULT 0
+);
+
+CREATE TABLE bucket (
+    bucket_id INT AUTO_INCREMENT PRIMARY KEY,
+    clientnumber INT NOT NULL,
+    book_id INT NOT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (clientnumber) REFERENCES client(clientnumber),
+    FOREIGN KEY (book_id) REFERENCES book(book_id)
+);
+
+CREATE TABLE review (
+    review_id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT NOT NULL,
+    clientnumber INT NOT NULL,
+    review_content TEXT NOT NULL,
+    rating INT CHECK (rating BETWEEN 1 AND 5),
+    review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (book_id) REFERENCES book(book_id) ON DELETE CASCADE,
+    FOREIGN KEY (clientnumber) REFERENCES client(clientnumber)  
+);
+
+CREATE TABLE purchase_history (
+    purchase_id INT AUTO_INCREMENT PRIMARY KEY,
+    clientnumber INT NOT NULL,
+    book_id INT NOT NULL,
+    quantity INT NOT NULL,
+    total_price INT NOT NULL,
+    purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('완료', '취소', '반품') DEFAULT '완료',
+
+    FOREIGN KEY (clientnumber) REFERENCES client(clientnumber) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES book(book_id)
+);
+
+CREATE TABLE order_history (
+    order_id INT AUTO_INCREMENT PRIMARY KEY,      
+    clientnumber INT NOT NULL,
+    book_id INT NOT NULL,
+    order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    quantity INT NOT NULL,
+    total_price DECIMAL(10, 2) NOT NULL,
+    status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (clientnumber) REFERENCES client(clientnumber) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES book(book_id) ON DELETE CASCADE
+);
+
+INSERT INTO book (title, author, genre, price, rating, stock) VALUES
+('The Hobbit', 'J.R.R. Tolkien', '판타지', 25000, 4.9, 15),
+('Brave New World', 'Aldous Huxley', 'SF', 30000, 4.6, 18),
+('The Great Gatsby', 'F. Scott Fitzgerald', '예술', 28000, 4.7, 20),
+('The Shining', 'Stephen King', '공포', 22000, 4.4, 12),
+('Catch-22', 'Joseph Heller', '역사', 26000, 4.6, 14),
+('To Kill a Mockingbird', 'Harper Lee', '청소년', 30000, 4.8, 20),
+('The Catcher in the Rye', 'J.D. Salinger', '청소년', 27000, 4.5, 18),
+('The Road', 'Cormac McCarthy', '미스터리', 32000, 4.7, 22),
+('Frankenstein', 'Mary Shelley', '공포', 20000, 4.2, 12),
+('The Lord of the Rings', 'J.R.R. Tolkien', '판타지', 35000, 4.9, 10),
+('The Silent Patient', 'Alex Michaelides', '미스터리', 25000, 4.8, 25),
+('On the Road', 'Jack Kerouac', '여행', 29000, 4.5, 17),
+('The Power of Now', 'Eckhart Tolle', '자기계발', 24000, 4.7, 13),
+('Animal Farm', 'George Orwell', 'SF', 23000, 4.6, 19),
+('Wuthering Heights', 'Emily Brontë', '로맨스', 22000, 4.3, 14),
+('The Art of Happiness', 'Dalai Lama', '자기계발', 28000, 4.9, 16),
+('The Godfather', 'Mario Puzo', '미스터리', 34000, 4.8, 18),
+('The Bible', 'Various Authors', '종교', 40000, 5.0, 30),
+('The Three-Body Problem', 'Liu Cixin', 'SF', 37000, 4.9, 22),
+('The Diary of a Young Girl', 'Anne Frank', '역사', 28000, 4.8, 15),
+('The Wind in the Willows', 'Kenneth Grahame', '청소년', 26000, 4.5, 18),
+('A Brief History of Time', 'Stephen Hawking', '과학', 32000, 4.8, 14),
+('The Girl on the Train', 'Paula Hawkins', '미스터리', 28000, 4.3, 20),
+('The Odyssey', 'Homer', '역사', 36000, 4.7, 25),
+('The Hunger Games', 'Suzanne Collins', '청소년', 32000, 4.6, 22),
+('The Complete Works of Shakespeare', 'William Shakespeare', '예술', 40000, 4.9, 10),
+('The Picture of Dorian Gray', 'Oscar Wilde', '예술', 25000, 4.4, 15),
+('How to Win Friends and Influence People', 'Dale Carnegie', '자기계발', 27000, 4.7, 30),
+('The Subtle Art of Not Giving a F*ck', 'Mark Manson', '자기계발', 26000, 4.5, 20),
+('Murder on the Orient Express', 'Agatha Christie', '미스터리', 28000, 4.8, 18),
+('The Secret', 'Rhonda Byrne', '자기계발', 23000, 4.1, 10),
+('Pride and Prejudice', 'Jane Austen', '로맨스', 30000, 4.6, 28),
+('The Da Vinci Code', 'Dan Brown', '미스터리', 35000, 4.9, 16),
+('A Game of Thrones', 'George R.R. Martin', '판타지', 37000, 4.9, 20),
+('The Martian', 'Andy Weir', 'SF', 34000, 4.8, 22),
+('Sapiens: A Brief History of Humankind', 'Yuval Noah Harari', '역사', 40000, 5.0, 12),
+('The Alchemist', 'Paulo Coelho', '자기계발', 28000, 4.7, 24),
+('1984', 'George Orwell', 'SF', 29000, 4.8, 18),
+('The Art of War', 'Sun Tzu', '역사', 27000, 4.7, 15),
+('The Great Adventure', 'John Doe', '판타지', 25000, 4.5, 20),
+('Science of the Universe', 'Jane Smith', '과학', 22000, 4.2, 15),
+('The Lost Treasure', 'Mark Twain', '판타지', 30000, 4.8, 10),
+('Romance in Paris', 'Emily Brontë', '로맨스', 24000, 4.3, 25),
+('Mystery of the Dark Woods', 'Agatha Christie', '미스터리', 33000, 4.7, 30),
+('The Haunted House', 'Stephen King', '공포', 20000, 4.6, 12),bucketbookclient
+('History of the Ancient World', 'Herodotus', '역사', 20000, 4.1, 8),
+('Youthful Dreams', 'Oscar Wilde', '청소년', 23000, 4.4, 22),
+('Self-Development for Success', 'clientclientclientbooksTony Robbins', '자기계발', 28000, 4.9, 18),
+('The Art of Cooking', 'Julia Child', '요리', 40000, 5.0, 5),
+('Philosophy of Life', 'Socrates', '철학', 29000, 4.8, 16),
+('The Beauty of Nature', 'John Muir', '에세이', 27000, 4.7, 14),
+('Travel Guide to Europe', 'Rick Steves', '여행', 30000, 4.3, 28),
+('Religious Teachings of the World', 'Dalai Lama', '종교', 38000, 4.9, 10),
+('The Psychology of Human Behavior', 'Sigmund Freud', '자기계발', 25000, 4.2, 13),
+('The Science of Happiness', 'Dale Carnegie', '자기계발', 23000, 4.4, 9),
+('Culinary Arts for Beginners', 'Gordon Ramsay', '요리', 30000, 4.6, 17),
+('The Future of Technology', 'Elon Musk', '과학', 35000, 4.7, 20),
+('The Meaning of Life', 'Albert Einstein', '철학', 31000, 4.5, 23),
+('Famous Paintings of the Renaissance', 'Leonardo da Vinci', '예술', 25000, 4.3, 11),
+('The Legends of Fantasy', 'J.R.R. Tolkien', '판타지', 40000, 5.0, 30),
+('Modern Philosophy', 'Immanuel Kant', '철학', 24000, 4.2, 14),
+('The Awakening', 'Kate Chopin', '철학', 21000, 3.8, 0);

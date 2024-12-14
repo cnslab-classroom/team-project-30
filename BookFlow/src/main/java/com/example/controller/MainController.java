@@ -814,7 +814,7 @@ mainPane.getChildren().addAll(recommendationsListView);
 
                         // 클릭 시 상세 정보 창 열기
                         setOnMouseClicked(event -> {
-                            if (!empty) {
+                            if (!empty && event.getClickCount() == 2) { // 두 번 클릭일 때만 실행
                                 openBookDetailWindow(book_id, title, author, genre, price, rating);
                             }
                         });
