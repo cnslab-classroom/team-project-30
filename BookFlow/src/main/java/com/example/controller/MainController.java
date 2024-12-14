@@ -29,6 +29,7 @@ public class MainController {
     private Button infoButton;
     private Button bucketButton;
     private ListView<String> resultListView;
+    private Button buyLogButton;
 
     // ComboBox와 TextField를 클래스의 인스턴스 변수로 선언
     private ComboBox<String> genreComboBox;
@@ -187,8 +188,7 @@ public class MainController {
 
             // 3. 구매내역 저장
             String insertOrderQuery = "INSERT INTO order_history (clientnumber, book_id, quantity, total_price, order_date) "
-                    +
-                    "SELECT bt.clientnumber, bt.book_id, bt.quantity, (bt.quantity * b.price), NOW() " +
+                    + "SELECT bt.clientnumber, bt.book_id, bt.quantity, (bt.quantity * b.price), NOW() " +
                     "FROM bucket bt " +
                     "JOIN book b ON bt.book_id = b.book_id " +
                     "WHERE bt.clientnumber = ?";
@@ -201,10 +201,15 @@ public class MainController {
             String updateStockQuery = "UPDATE book b " +
                     "JOIN bucket bt ON b.book_id = bt.book_id " +
                     "SET b.stock = b.stock - bt.quantity " +
-                    "WHERE bt.clientnumber = ?";
+                    "WHERE bt.clientnumber = ? AND b.stock >= bt.quantity";
             try (PreparedStatement stockStatement = connection.prepareStatement(updateStockQuery)) {
                 stockStatement.setInt(1, clientNumber);
-                stockStatement.executeUpdate();
+                int rowsAffected = stockStatement.executeUpdate();
+                if (rowsAffected == 0) {
+                    showAlert("오류", "재고가 부족하여 구매를 진행할 수 없습니다.");
+                    connection.rollback();
+                    return;
+                }
             }
 
             // 5. 소지금액 차감
@@ -337,11 +342,59 @@ public class MainController {
             bucketStage.showAndWait();
         });
 
+        // 구매 내역 버튼 클릭 시 동작
+        buyLogButton.setOnAction(e -> {
+            Stage purchaseHistoryStage = new Stage();
+            purchaseHistoryStage.setTitle("구매 내역");
+
+            ListView<String> purchaseListView = new ListView<>();
+            loadPurchaseHistory(purchaseListView);
+
+            VBox layout = new VBox(10);
+            layout.setPadding(new Insets(10));
+            layout.getChildren().addAll(purchaseListView);
+
+            Scene scene = new Scene(layout, 600, 400);
+            purchaseHistoryStage.setScene(scene);
+            purchaseHistoryStage.show();
+        });
+
         Scene scene = new Scene(mainPane);
         stage = new Stage();
         stage.setTitle("BookFlow");
         stage.setScene(scene);
         stage.setResizable(false);
+    }
+
+    private void loadPurchaseHistory(ListView<String> purchaseListView) {
+        purchaseListView.getItems().clear();
+
+        String query = "SELECT oh.order_id, b.title, oh.quantity, oh.total_price, oh.order_date " +
+                "FROM order_history oh " +
+                "JOIN book b ON oh.book_id = b.book_id " +
+                "WHERE oh.clientnumber = ? " +
+                "ORDER BY oh.order_date DESC";
+
+        try (Connection connection = DBConnection.getConnection("bookflow_db");
+                PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, clientNumber);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    int orderId = rs.getInt("order_id");
+                    String title = rs.getString("title");
+                    int quantity = rs.getInt("quantity");
+                    double totalPrice = rs.getDouble("total_price");
+                    String orderDate = rs.getString("order_date");
+
+                    String itemText = String.format("주문 번호: %d | 책: %s | 수량: %d | 총 가격: %.2f원 | 주문 날짜: %s",
+                            orderId, title, quantity, totalPrice, orderDate);
+                    purchaseListView.getItems().add(itemText);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showAlert("오류", "구매 내역을 불러오는 데 실패했습니다.");
+        }
     }
 
     private void loadBucketData(ListView<String> bucketListView) {
@@ -388,7 +441,7 @@ public class MainController {
         Region spacer = new Region();
 
         bucketButton = new Button("장바구니");
-        Button buyLogButton = new Button("구매내역");
+        buyLogButton = new Button("구매내역"); // 클래스 변수로 직접 초기화
         infoButton = new Button("아이디, 잔액");
 
         bucketButton.setPrefHeight(30);
