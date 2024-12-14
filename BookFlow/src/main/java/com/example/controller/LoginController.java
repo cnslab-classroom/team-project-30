@@ -57,7 +57,8 @@ public class LoginController {
         signupButton.setLayoutY(140);
 
         // Add components to the pane
-        loginPane.getChildren().addAll(usernameLabel, usernameField, passwordLabel, passwordField, loginButton, signupButton);
+        loginPane.getChildren().addAll(usernameLabel, usernameField, passwordLabel, passwordField, loginButton,
+                signupButton);
 
         // Button Actions
         loginButton.setOnAction(event -> handleLogin());
@@ -82,8 +83,8 @@ public class LoginController {
 
     public boolean authenticate(String username, String password) {
         String query = "SELECT clientnumber FROM client WHERE clientname = ? AND pw = ?";
-        try (Connection connection = DBConnection.getConnection("bookflow_db");  // client 데이터베이스 연결
-             PreparedStatement statement = connection.prepareStatement(query)) {
+        try (Connection connection = DBConnection.getConnection("bookflow_db"); // client 데이터베이스 연결
+                PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setString(1, username);
             statement.setString(2, password);
 

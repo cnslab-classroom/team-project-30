@@ -64,6 +64,7 @@ public class CartController {
                 "JOIN book b ON bt.book_id = b.book_id WHERE bt.clientnumber = ?";
         try (Connection connection = DBConnection.getConnection("bookflow_db");
                 PreparedStatement statement = connection.prepareStatement(query)) {
+
             statement.setInt(1, clientNumber);
             ResultSet rs = statement.executeQuery();
 
@@ -74,8 +75,8 @@ public class CartController {
                 double total = quantity * price;
 
                 // Add item to ListView
-                String itemText = String.format("%s - 수량: %d | 가격: %, .0f 원 | 총액: %, .0f 원", title, quantity, price,
-                        total);
+                String itemText = String.format("%s - 수량: %d | 가격: %,d 원 | 총액: %,d 원", title, quantity, (int) price,
+                        (int) total);
                 cartListView.getItems().add(itemText);
 
                 // Calculate total price
@@ -85,9 +86,10 @@ public class CartController {
             // Update total price label
             DecimalFormat formatter = new DecimalFormat("#,###");
             totalPriceLabel.setText("총 가격: " + formatter.format(totalPrice) + " 원");
+
         } catch (SQLException e) {
             e.printStackTrace();
-            showAlert("오류", "장바구니 데이터를 로드하는 데 오류가 발생했습니다.");
+            showAlert("오류", "장바구니 데이터를 로드하는 도중 문제가 발생했습니다.");
         }
     }
 

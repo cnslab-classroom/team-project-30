@@ -16,7 +16,7 @@ public class SignupController {
     private LoginController loginController;
 
     public SignupController(LoginController loginController) {
-        this.loginController = loginController;  // LoginController를 전달받음
+        this.loginController = loginController; // LoginController를 전달받음
         initialize();
     }
 
@@ -80,11 +80,11 @@ public class SignupController {
 
     private boolean isUsernameTaken(String username) {
         String query = "SELECT clientname FROM client WHERE clientname = ?";
-        try (Connection connection = DBConnection.getConnection("bookflow_db"); 
-             PreparedStatement statement = connection.prepareStatement(query)) {
+        try (Connection connection = DBConnection.getConnection("bookflow_db");
+                PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setString(1, username);
             try (ResultSet resultSet = statement.executeQuery()) {
-                return resultSet.next();  // 중복된 username이 있으면 true
+                return resultSet.next(); // 중복된 username이 있으면 true
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -95,7 +95,7 @@ public class SignupController {
     private boolean createAccount(String username, String password) {
         String query = "INSERT INTO client (clientname, pw) VALUES (?, ?)";
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(query)) {
+                PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setString(1, username);
             statement.setString(2, password);
             return statement.executeUpdate() > 0; // 성공적으로 추가되면 true 반환

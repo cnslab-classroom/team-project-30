@@ -49,7 +49,8 @@ public class InfoController {
         loadClientDetails(clientNameLabel, joinDateLabel, balanceLabel);
 
         // Add Labels to AnchorPane
-        infoPane.getChildren().addAll(clientNameLabel, joinDateLabel, balanceLabel, chargeLabel, chargeField, chargeButton, clientNumLabel);
+        infoPane.getChildren().addAll(clientNameLabel, joinDateLabel, balanceLabel, chargeLabel, chargeField,
+                chargeButton, clientNumLabel);
 
         // Set positions for Labels
         AnchorPane.setTopAnchor(clientNameLabel, 20.0);
@@ -115,7 +116,7 @@ public class InfoController {
         // client_db에서 클라이언트 정보 로드
         String query = "SELECT clientname, join_date, balance FROM client WHERE clientnumber = ?";
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(query)) {
+                PreparedStatement statement = connection.prepareStatement(query)) {
 
             // Set the client number parameter
             statement.setInt(1, clientNumber);
@@ -147,7 +148,7 @@ public class InfoController {
         // client_db에서 잔액 업데이트
         String query = "UPDATE client SET balance = balance + ? WHERE clientnumber = ?";
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(query)) {
+                PreparedStatement statement = connection.prepareStatement(query)) {
 
             // Set the parameters
             statement.setInt(1, chargeAmount);

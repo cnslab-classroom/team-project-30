@@ -20,10 +20,10 @@ public class ReviewController {
     public static class Review {
         private String clientName;
         private String reviewContent;
-        private int rating;
+        private double rating;
         private Timestamp reviewDate;
 
-        public Review(String clientName, String reviewContent, int rating, Timestamp reviewDate) {
+        public Review(String clientName, String reviewContent, double rating, Timestamp reviewDate) {
             this.clientName = clientName;
             this.reviewContent = reviewContent;
             this.rating = rating;
@@ -39,7 +39,7 @@ public class ReviewController {
             return reviewContent;
         }
 
-        public int getRating() {
+        public double getRating() {
             return rating;
         }
 
@@ -57,15 +57,15 @@ public class ReviewController {
     // 책에 대한 모든 리뷰를 가져오는 메서드
     public ObservableList<Review> getReviewsForBook(int bookId) {
         List<Review> reviews = new ArrayList<>();
-        
+
         // 데이터베이스 연결 및 쿼리 실행
         String query = "SELECT client.clientname, review.review_content, review.rating, review.review_date " +
-                       "FROM review " +
-                       "JOIN client ON review.clientnumber = client.clientnumber " +
-                       "WHERE review.book_id = ?";
+                "FROM review " +
+                "JOIN client ON review.clientnumber = client.clientnumber " +
+                "WHERE review.book_id = ?";
 
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(query)) {
+                PreparedStatement statement = connection.prepareStatement(query)) {
 
             // bookId 파라미터 설정
             statement.setInt(1, bookId);
@@ -75,7 +75,7 @@ public class ReviewController {
                 while (resultSet.next()) {
                     String clientName = resultSet.getString("clientname");
                     String reviewContent = resultSet.getString("review_content");
-                    int rating = resultSet.getInt("rating");
+                    double rating = resultSet.getDouble("rating");
                     Timestamp reviewDate = resultSet.getTimestamp("review_date");
 
                     // Review 객체 생성 후 리스트에 추가
@@ -87,9 +87,8 @@ public class ReviewController {
         }
 
         ObservableList<Review> observableList = FXCollections.observableArrayList(reviews);
-        
+
         return observableList;
     }
 
-    
 }

@@ -1,0 +1,20 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "mvn clean install",
+            "type": "shell",
+            "command": "C:/Program Files/apache-maven-3.9.9/bin/mvn",
+            "args": [
+                "clean",
+                "install"
+            ],
+            "problemMatcher": ["$javac"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Generated task to run Maven clean install"
+        }
+    ]
+}

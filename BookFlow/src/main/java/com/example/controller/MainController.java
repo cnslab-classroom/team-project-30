@@ -329,8 +329,8 @@ public class MainController {
         resultBox.setSpacing(10);
         resultBox.setPadding(new Insets(10));
 
-        // ListView를 초기화
-        resultListView = new ListView<>(); // 클래스 필드에 할당
+        // ListView 초기화
+        resultListView = new ListView<>();
         resultBox.setStyle("-fx-background-color: #e0e0e0;");
 
         // 새로고침 버튼
@@ -351,21 +351,44 @@ public class MainController {
             String selectedBookText = resultListView.getSelectionModel().getSelectedItem();
 
             if (selectedBookText == null) {
-                // 책을 선택하지 않으면 경고 메시지 표시
                 showAlert("오류", "책을 선택해주세요.");
                 return;
             }
 
-            // 수량 입력 값 가져오기
+            // 데이터 파싱 및 검증
+            String[] parts = selectedBookText.split(";");
+            if (parts.length < 7) { // parts 배열 길이 확인
+                showAlert("오류", "잘못된 데이터 형식입니다.");
+                return;
+            }
+
+            // 필요한 데이터 추출
+            String bookIdStr = parts[0];
+            String title = parts[1];
+            String priceStr = parts[4].replace(",", ""); // 가격 추출
+            String stockStr = parts[6].replace(",", "");
+
+            int bookId;
+            int stock;
+            double price; // 가격 변수 추가
+
+            try {
+                bookId = Integer.parseInt(bookIdStr);
+                stock = Integer.parseInt(stockStr);
+                price = Double.parseDouble(priceStr); // price 값 파싱
+            } catch (NumberFormatException ex) {
+                showAlert("오류", "잘못된 데이터 형식입니다.");
+                return;
+            }
+
+            // 수량 입력 값 검증
             String quantityText = bucketField.getText();
             if (quantityText.isEmpty()) {
-                // 수량이 입력되지 않으면 경고 메시지 표시
                 showAlert("오류", "수량을 입력해주세요.");
                 return;
             }
 
-            // 수량이 숫자인지 확인
-            int quantity = 0;
+            int quantity;
             try {
                 quantity = Integer.parseInt(quantityText);
                 if (quantity <= 0) {
@@ -373,22 +396,19 @@ public class MainController {
                     return;
                 }
             } catch (NumberFormatException ex) {
-                showAlert("오류", "수량은 유효한 숫자만 입력 가능합니다.");
+                showAlert("오류", "수량은 유효한 숫자여야 합니다.");
                 return;
             }
 
-            // 선택한 책 정보 파싱 (가격과 재고 추출)
-            String[] parts = selectedBookText.split(";");
-            String title = parts[0];
-            int stock = Integer.parseInt(parts[5].replace(",", "")); // 재고 정보
-
+            // 재고 확인
             if (quantity > stock) {
-                // 수량이 재고보다 많으면 오류 메시지 표시
                 showAlert("오류", "재고보다 많은 수량을 입력할 수 없습니다.");
-            } else {
-                // 장바구니에 추가
-                addToCart(title, quantity);
+                return;
             }
+
+            // 장바구니에 추가
+            addBookToBucket(title, bookId, quantity, price);
+
         });
 
         resultBox.getChildren().addAll(refreshButton, resultListView, bucketField, addBucketButton);
@@ -397,28 +417,27 @@ public class MainController {
     }
 
     // 장바구니에 책 추가하는 메서드
-    private void addToCart(String bookTitle, int quantity) {
-        // 먼저 책 제목을 통해 book_id를 조회해야 함
-        String getBookIdQuery = "SELECT book_id, price FROM book WHERE title = ?";
+    private void addToCart(int bookId, String bookTitle, int quantity) {
+        String query = "INSERT INTO bucket (clientnumber, book_id, quantity, price) " +
+                "SELECT ?, ?, ?, price FROM book WHERE book_id = ?";
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-                PreparedStatement statement = connection.prepareStatement(getBookIdQuery)) {
+                PreparedStatement statement = connection.prepareStatement(query)) {
 
-            statement.setString(1, bookTitle); // 책 제목을 파라미터로 설정
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    int bookId = resultSet.getInt("book_id"); // 책 ID
-                    double bookPrice = resultSet.getDouble("price"); // 책 가격
+            statement.setInt(1, clientNumber);
+            statement.setInt(2, bookId);
+            statement.setInt(3, quantity);
+            statement.setInt(4, bookId);
 
-                    // 책을 찾았다면, bucket 테이블에 추가
-                    addBookToBucket(bookTitle, bookId, quantity, bookPrice); // bookTitle을 추가
-                } else {
-                    // 책을 찾을 수 없으면 알림
-                    showAlert("오류", "책을 찾을 수 없습니다.");
-                }
+            int rowsAffected = statement.executeUpdate();
+            if (rowsAffected > 0) {
+                showAlert("성공", bookTitle + "이(가) 장바구니에 추가되었습니다.");
+            } else {
+                showAlert("오류", "장바구니에 추가하지 못했습니다.");
             }
-        } catch (Exception e) {
-            showAlert("오류", "장바구니에 책을 추가하는데 오류가 발생했습니다.");
+
+        } catch (SQLException e) {
             e.printStackTrace();
+            showAlert("오류", "장바구니에 책을 추가하는 중 문제가 발생했습니다.");
         }
     }
 
