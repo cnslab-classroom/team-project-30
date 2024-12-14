@@ -44,19 +44,6 @@ CREATE TABLE review (
     FOREIGN KEY (clientnumber) REFERENCES client(clientnumber)  
 );
 
-CREATE TABLE purchase_history (
-    purchase_id INT AUTO_INCREMENT PRIMARY KEY,
-    clientnumber INT NOT NULL,
-    book_id INT NOT NULL,
-    quantity INT NOT NULL,
-    total_price INT NOT NULL,
-    purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('완료', '취소', '반품') DEFAULT '완료',
-
-    FOREIGN KEY (clientnumber) REFERENCES client(clientnumber) ON DELETE CASCADE,
-    FOREIGN KEY (book_id) REFERENCES book(book_id)
-);
-
 CREATE TABLE order_history (
     order_id INT AUTO_INCREMENT PRIMARY KEY,      
     clientnumber INT NOT NULL,
