@@ -57,24 +57,29 @@ public class PurchaseHistoryController {
         // Query to get purchase history from the database
         String query = "SELECT b.title, p.purchase_date, p.amount FROM purchase_history p " +
                 "JOIN book b ON p.book_id = b.book_id WHERE p.clientnumber = ?";
-        try (Connection connection = DBConnection.getConnection("bookflow_db");
-                PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setInt(1, clientNumber);
-            ResultSet rs = statement.executeQuery();
+        try (Connection connection = DBConnection.getConnection("bookflow_db")) {
+            // 1. Insert order into order_history
+            String insertOrderQuery = "INSERT INTO order_history (clientnumber, book_id, quantity, total_price) " +
+                    "SELECT bt.clientnumber, bt.book_id, bt.quantity, (bt.quantity * b.price) " +
+                    "FROM bucket bt " +
+                    "JOIN book b ON bt.book_id = b.book_id " +
+                    "WHERE bt.clientnumber = ?";
+            try (PreparedStatement orderStatement = connection.prepareStatement(insertOrderQuery)) {
+                orderStatement.setInt(1, clientNumber);
+                orderStatement.executeUpdate();
+            }
 
-            while (rs.next()) {
-                String title = rs.getString("title");
-                String purchaseDate = rs.getString("purchase_date");
-                double amount = rs.getDouble("amount");
-
-                // Add item to ListView
-                String itemText = String.format("%s | 구매일: %s | 금액: %, .0f 원", title, purchaseDate, amount);
-                purchaseListView.getItems().add(itemText);
+            // 2. Clear bucket for the client
+            String clearBucketQuery = "DELETE FROM bucket WHERE clientnumber = ?";
+            try (PreparedStatement clearStatement = connection.prepareStatement(clearBucketQuery)) {
+                clearStatement.setInt(1, clientNumber);
+                clearStatement.executeUpdate();
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            showAlert("오류", "구매 내역을 로드하는 데 오류가 발생했습니다.");
+            showAlert("오류", "구매 처리 중 오류가 발생했습니다.");
         }
+
     }
 
     private void handleReturnRequest(ListView<String> purchaseListView) {

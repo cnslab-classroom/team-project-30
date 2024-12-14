@@ -146,6 +146,96 @@ public class MainController {
         return queryBuilder.toString();
     }
 
+    private void handlePurchase(ListView<String> bucketListView) {
+        double totalCost = 0;
+
+        try (Connection connection = DBConnection.getConnection("bookflow_db")) {
+            connection.setAutoCommit(false); // 트랜잭션 시작
+
+            // 1. 총 비용 계산
+            String queryTotalCost = "SELECT SUM(bt.quantity * b.price) AS totalCost " +
+                    "FROM bucket bt " +
+                    "JOIN book b ON bt.book_id = b.book_id " +
+                    "WHERE bt.clientnumber = ?";
+            try (PreparedStatement statement = connection.prepareStatement(queryTotalCost)) {
+                statement.setInt(1, clientNumber);
+                try (ResultSet rs = statement.executeQuery()) {
+                    if (rs.next()) {
+                        totalCost = rs.getDouble("totalCost");
+                    }
+                }
+            }
+
+            // 2. 소지금액 확인
+            double balance = 0;
+            String queryBalance = "SELECT balance FROM client WHERE clientnumber = ?";
+            try (PreparedStatement balanceStatement = connection.prepareStatement(queryBalance)) {
+                balanceStatement.setInt(1, clientNumber);
+                try (ResultSet rs = balanceStatement.executeQuery()) {
+                    if (rs.next()) {
+                        balance = rs.getDouble("balance");
+                    }
+                }
+            }
+
+            // 소지금액 부족 시 처리
+            if (totalCost > balance) {
+                showAlert("오류", "소지금액이 부족합니다! 구매를 진행할 수 없습니다.");
+                connection.rollback(); // 트랜잭션 롤백
+                return;
+            }
+
+            // 3. 구매내역 저장
+            String insertOrderQuery = "INSERT INTO order_history (clientnumber, book_id, quantity, total_price, order_date) "
+                    +
+                    "SELECT bt.clientnumber, bt.book_id, bt.quantity, (bt.quantity * b.price), NOW() " +
+                    "FROM bucket bt " +
+                    "JOIN book b ON bt.book_id = b.book_id " +
+                    "WHERE bt.clientnumber = ?";
+            try (PreparedStatement orderStatement = connection.prepareStatement(insertOrderQuery)) {
+                orderStatement.setInt(1, clientNumber);
+                orderStatement.executeUpdate();
+            }
+
+            // 4. 책 재고 업데이트
+            String updateStockQuery = "UPDATE book b " +
+                    "JOIN bucket bt ON b.book_id = bt.book_id " +
+                    "SET b.stock = b.stock - bt.quantity " +
+                    "WHERE bt.clientnumber = ?";
+            try (PreparedStatement stockStatement = connection.prepareStatement(updateStockQuery)) {
+                stockStatement.setInt(1, clientNumber);
+                stockStatement.executeUpdate();
+            }
+
+            // 5. 소지금액 차감
+            String updateBalanceQuery = "UPDATE client SET balance = balance - ? WHERE clientnumber = ?";
+            try (PreparedStatement updateBalanceStatement = connection.prepareStatement(updateBalanceQuery)) {
+                updateBalanceStatement.setDouble(1, totalCost);
+                updateBalanceStatement.setInt(2, clientNumber);
+                updateBalanceStatement.executeUpdate();
+            }
+
+            // 6. 장바구니 비우기
+            String deleteBucketQuery = "DELETE FROM bucket WHERE clientnumber = ?";
+            try (PreparedStatement deleteStatement = connection.prepareStatement(deleteBucketQuery)) {
+                deleteStatement.setInt(1, clientNumber);
+                deleteStatement.executeUpdate();
+            }
+
+            // 트랜잭션 커밋
+            connection.commit();
+
+            // UI 업데이트
+            bucketListView.getItems().clear();
+            showAlert("구매 성공", "구매가 완료되었습니다!");
+            updateBalance(); // 잔액 UI 업데이트
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showAlert("오류", "구매 처리 중 오류가 발생했습니다.");
+        }
+    }
+
     private void initialize() {
         AnchorPane mainPane = new AnchorPane();
         mainPane.setPrefSize(1200, 750);
@@ -190,34 +280,34 @@ public class MainController {
             Stage bucketStage = new Stage();
             bucketStage.setTitle("장바구니");
 
-            // 빈 레이아웃 설정
             VBox bucketLayout = new VBox();
             bucketLayout.setPadding(new Insets(10));
             bucketLayout.setSpacing(10);
 
-            // ListView 초기화
+            // 장바구니 데이터 표시를 위한 ListView
             ListView<String> bucketListView = new ListView<>();
             bucketListView.setPrefHeight(400);
 
             // 장바구니 데이터 로드
             loadBucketData(bucketListView);
 
+            // HBox에 삭제 버튼과 구매 버튼 추가
             HBox deleteBox = new HBox();
             deleteBox.setSpacing(10);
             deleteBox.setAlignment(Pos.TOP_RIGHT);
-            Button deleteAllButton = new Button("삭제");
 
-            // 전체 삭제 버튼 클릭 시
+            Button deleteAllButton = new Button("삭제");
+            Button purchaseButton = new Button("구매하기");
+
             deleteAllButton.setOnAction(event -> {
                 try (Connection connection = DBConnection.getConnection("bookflow_db")) {
                     String query = "DELETE FROM bucket WHERE clientnumber = ?";
                     try (PreparedStatement statement = connection.prepareStatement(query)) {
-                        statement.setInt(1, clientNumber); // 클라이언트 번호 설정
+                        statement.setInt(1, clientNumber);
                         int rowsAffected = statement.executeUpdate();
                         if (rowsAffected > 0) {
-                            // 삭제 성공 메시지 또는 업데이트된 장바구니 내용 표시
                             System.out.println("장바구니의 모든 항목이 삭제되었습니다.");
-                            loadBucketData(bucketListView); // 장바구니 데이터를 다시 로드
+                            loadBucketData(bucketListView);
                         } else {
                             System.out.println("삭제할 항목이 없습니다.");
                         }
@@ -227,21 +317,24 @@ public class MainController {
                 }
             });
 
-            deleteBox.getChildren().addAll(deleteAllButton);
-            deleteAllButton.setPrefWidth(200);
+            purchaseButton.setOnAction(event -> {
+                handlePurchase(bucketListView); // 구매 처리 메서드 호출
+            });
 
-            // 장바구니 씬 설정
+            deleteAllButton.setPrefWidth(200);
+            purchaseButton.setPrefWidth(200);
+
+            deleteBox.getChildren().addAll(deleteAllButton, purchaseButton);
+
+            // 장바구니 레이아웃에 ListView와 버튼 박스 추가
+            bucketLayout.getChildren().addAll(bucketListView, deleteBox);
+
             Scene bucketScene = new Scene(bucketLayout, 800, 600);
             bucketStage.setScene(bucketScene);
             bucketStage.setResizable(false);
 
-            // 모달 설정 (기존 창 조작 불가)
             bucketStage.initModality(Modality.APPLICATION_MODAL);
-
-            // 장바구니 레이아웃에 ListView 추가
-            bucketLayout.getChildren().addAll(bucketListView, deleteBox);
-
-            bucketStage.showAndWait(); // showAndWait을 사용하여 창 닫힘 후에 코드 실행
+            bucketStage.showAndWait();
         });
 
         Scene scene = new Scene(mainPane);
@@ -414,31 +507,6 @@ public class MainController {
         resultBox.getChildren().addAll(refreshButton, resultListView, bucketField, addBucketButton);
 
         return resultBox;
-    }
-
-    // 장바구니에 책 추가하는 메서드
-    private void addToCart(int bookId, String bookTitle, int quantity) {
-        String query = "INSERT INTO bucket (clientnumber, book_id, quantity, price) " +
-                "SELECT ?, ?, ?, price FROM book WHERE book_id = ?";
-        try (Connection connection = DBConnection.getConnection("bookflow_db");
-                PreparedStatement statement = connection.prepareStatement(query)) {
-
-            statement.setInt(1, clientNumber);
-            statement.setInt(2, bookId);
-            statement.setInt(3, quantity);
-            statement.setInt(4, bookId);
-
-            int rowsAffected = statement.executeUpdate();
-            if (rowsAffected > 0) {
-                showAlert("성공", bookTitle + "이(가) 장바구니에 추가되었습니다.");
-            } else {
-                showAlert("오류", "장바구니에 추가하지 못했습니다.");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert("오류", "장바구니에 책을 추가하는 중 문제가 발생했습니다.");
-        }
     }
 
     // bucket 테이블에 책을 추가하는 메서드
