@@ -2,7 +2,6 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=java
 
 # DO NOT STAGE
-BookFlow\src\main\java\com\example\util\DBConnection.java
 .vscode/
 
 ### Java ###

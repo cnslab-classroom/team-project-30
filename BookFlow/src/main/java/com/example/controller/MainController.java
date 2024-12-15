@@ -694,7 +694,7 @@ public class MainController {
                         String author = parts[2];
                         String genre = parts[3];
                         String price = parts[4];
-                        String rating = parts[5];
+                        Double rating = Double.parseDouble(parts[5]);
                         String stock = parts[6];
 
                         // HBox 레이아웃 생성
@@ -728,7 +728,7 @@ public class MainController {
 
                         // 클릭 시 상세 정보 창 열기
                         setOnMouseClicked(event -> {
-                            if (!empty) {
+                            if (!empty && event.getClickCount() == 2) { // 두 번 클릭일 때만 실행
                                 openBookDetailWindow(book_id, title, author, genre, price, rating);
                             }
                         });
@@ -746,7 +746,7 @@ public class MainController {
     }
 
     private void openBookDetailWindow(int book_id, String title, String author, String genre, String price,
-            String rating) {
+            Double rating) {
         ReviewController review = new ReviewController();
 
         // 새로운 Stage(창) 생성

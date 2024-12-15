@@ -4,10 +4,6 @@ import com.example.util.DBConnection;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
-import javafx.scene.layout.AnchorPane;
-import javafx.stage.Stage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +45,7 @@ public class ReviewController {
 
         @Override
         public String toString() {
-            return String.format("작성자: %s, 평점: %d, 리뷰: %s, 날짜: %s",
+            return String.format("작성자: %s, 평점: %.1f, 리뷰: %s, 날짜: %s",
                     clientName, rating, reviewContent, reviewDate.toString());
         }
     }
