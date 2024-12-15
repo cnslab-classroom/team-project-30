@@ -87,4 +87,46 @@ public class ReviewController {
         return observableList;
     }
 
+    // 특정 책에 대한 특정 사용자의 리뷰 유무 확인
+    public boolean isReviewExist(int bookId, int clientNumber) {
+        String query = "SELECT COUNT(*) FROM review WHERE book_id = ? AND clientnumber = ?";
+        
+        try (Connection connection = DBConnection.getConnection("bookflow_db");
+             PreparedStatement statement = connection.prepareStatement(query)) {
+
+            statement.setInt(1, bookId);
+            statement.setInt(2, clientNumber);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1) > 0; // 리뷰가 있으면 true
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false; // 리뷰가 없으면 false
+    }
+
+    // 리뷰를 추가하는 메서드
+    public boolean addReview(int bookId, int clientNumber, String reviewContent, double rating) {
+        String query = "INSERT INTO review (book_id, clientnumber, review_content, rating) VALUES (?, ?, ?, ?)";
+
+        try (Connection connection = DBConnection.getConnection("bookflow_db");
+             PreparedStatement statement = connection.prepareStatement(query)) {
+
+            statement.setInt(1, bookId);
+            statement.setInt(2, clientNumber);
+            statement.setString(3, reviewContent);
+            statement.setDouble(4, rating);
+
+            int rowsAffected = statement.executeUpdate();
+            return rowsAffected > 0; // 성공적으로 삽입되면 true
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false; // 오류가 발생하면 false
+    }
 }

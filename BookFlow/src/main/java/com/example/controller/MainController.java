@@ -350,16 +350,36 @@ public class MainController {
             Stage purchaseHistoryStage = new Stage();
             purchaseHistoryStage.setTitle("구매 내역");
 
-            ListView<String> purchaseListView = new ListView<>();
+            // 구매 내역 불러오기
+            ListView<OrderedItem> purchaseListView = new ListView<>();
             loadPurchaseHistory(purchaseListView);
+
+            Label instructionLabel = new Label("리뷰를 작성하려면 항목을 더블클릭해주세요");
 
             VBox layout = new VBox(10);
             layout.setPadding(new Insets(10));
-            layout.getChildren().addAll(purchaseListView);
+            layout.getChildren().addAll(instructionLabel ,purchaseListView);
 
             Scene scene = new Scene(layout, 600, 400);
             purchaseHistoryStage.setScene(scene);
             purchaseHistoryStage.show();
+
+            purchaseListView.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2) { // 더블클릭 시
+                    OrderedItem selectedItem = purchaseListView.getSelectionModel().getSelectedItem();
+                    int bookId = selectedItem.getBookId(); // 선택된 항목에서 책 ID 가져오기
+        
+                    // ReviewController를 이용하여 해당 책에 리뷰가 존재하는지 확인
+                    ReviewController reviewController = new ReviewController();
+        
+                    if (!reviewController.isReviewExist(bookId, clientNumber)) {
+                        // 리뷰 작성 창 띄우기
+                        showReviewForm(bookId, clientNumber);
+                    } else {
+                        showAlert("접근 불가", "이미 작성된 리뷰가 있습니다.");
+                    }
+                }
+            });
         });
 
         Scene scene = new Scene(mainPane);
@@ -369,10 +389,10 @@ public class MainController {
         stage.setResizable(false);
     }
 
-    private void loadPurchaseHistory(ListView<String> purchaseListView) {
+    private void loadPurchaseHistory(ListView<OrderedItem> purchaseListView) {
         purchaseListView.getItems().clear();
 
-        String query = "SELECT oh.order_id, b.title, oh.quantity, oh.total_price, oh.order_date " +
+        String query = "SELECT oh.order_id, b.book_id, b.title, oh.quantity, oh.total_price, oh.order_date " +
                 "FROM order_history oh " +
                 "JOIN book b ON oh.book_id = b.book_id " +
                 "WHERE oh.clientnumber = ? " +
@@ -385,19 +405,59 @@ public class MainController {
                 while (rs.next()) {
                     int orderId = rs.getInt("order_id");
                     String title = rs.getString("title");
+                    int bookId = rs.getInt("book_id");
                     int quantity = rs.getInt("quantity");
                     double totalPrice = rs.getDouble("total_price");
                     String orderDate = rs.getString("order_date");
-
-                    String itemText = String.format("주문 번호: %d | 책: %s | 수량: %d | 총 가격: %.2f원 | 주문 날짜: %s",
-                            orderId, title, quantity, totalPrice, orderDate);
-                    purchaseListView.getItems().add(itemText);
+                    
+                    OrderedItem orderItem = new OrderedItem(orderId, title, bookId, quantity, totalPrice, orderDate);
+                    purchaseListView.getItems().add(orderItem);
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
             showAlert("오류", "구매 내역을 불러오는 데 실패했습니다.");
         }
+    }
+
+    private void showReviewForm(int bookId, int clientNumber) {
+        // 리뷰 입력을 위한 새로운 윈도우 생성
+        Stage reviewStage = new Stage();
+        reviewStage.setTitle("리뷰 작성");
+    
+        // 텍스트 필드와 평점 선택을 위한 UI 구성
+        TextArea reviewContentArea = new TextArea();
+        reviewContentArea.setPromptText("리뷰 내용을 입력하세요...");
+        reviewContentArea.setWrapText(true);
+    
+        Spinner<Integer> ratingSpinner = new Spinner<>(1, 5, 3);  // 평점은 1부터 5까지, 기본 값은 3
+        ratingSpinner.setEditable(true);
+        
+        Button submitButton = new Button("리뷰 제출");
+        submitButton.setOnAction(e -> {
+            String reviewContent = reviewContentArea.getText();
+            int rating = ratingSpinner.getValue();
+    
+            // ReviewController의 addReview 메서드로 리뷰 추가
+            ReviewController reviewController = new ReviewController();
+            boolean isSuccess = reviewController.addReview(bookId, clientNumber, reviewContent, rating);
+    
+            if (isSuccess) {
+                showAlert("성공", "리뷰가 성공적으로 작성되었습니다.");
+                reviewStage.close();  // 리뷰 작성 창 닫기
+            } else {
+                showAlert("실패", "리뷰 작성에 실패했습니다.");
+            }
+        });
+    
+        // 레이아웃 설정
+        VBox layout = new VBox(10);
+        layout.setPadding(new Insets(10));
+        layout.getChildren().addAll(new Label("리뷰 내용:"), reviewContentArea, new Label("평점:"), ratingSpinner, submitButton);
+    
+        Scene scene = new Scene(layout, 400, 300);
+        reviewStage.setScene(scene);
+        reviewStage.show();
     }
 
     private void loadBucketData(ListView<String> bucketListView) {
@@ -501,7 +561,7 @@ public class MainController {
         });
 
         // 장바구니 수량 입력 필드
-        TextField bucketField = new TextField();
+        TextField bucketField = new TextField("1");
         bucketField.setPromptText("수량");
 
         // 장바구니 추가 버튼
