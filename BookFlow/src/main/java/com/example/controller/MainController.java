@@ -7,7 +7,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.List;
 
 import com.example.util.DBConnection;
 
@@ -349,71 +348,39 @@ public class MainController {
         // 구매 내역 버튼 클릭 시 동작
         buyLogButton.setOnAction(e -> {
             Stage purchaseHistoryStage = new Stage();
-            purchaseHistoryStage.setTitle("구매 내역 및 추천");
-        
+            purchaseHistoryStage.setTitle("구매 내역");
+
             ListView<String> purchaseListView = new ListView<>();
-            ListView<String> recommendationsListView = new ListView<>();
-        
-            loadPurchaseHistoryAndRecommendations(purchaseListView, recommendationsListView);
-        
-            // 레이아웃 설정
+            loadPurchaseHistory(purchaseListView);
+
             VBox layout = new VBox(10);
             layout.setPadding(new Insets(10));
-            layout.setPrefSize(600, 400); // 레이아웃 크기 명시
-        
-            layout.getChildren().addAll(
-                new Label("구매 내역"), purchaseListView,
-                new Label("추천 책"), recommendationsListView
-            );
-        
-            Scene scene = new Scene(layout, 600, 400); // Scene 크기 명시
+            layout.getChildren().addAll(purchaseListView);
+
+            Scene scene = new Scene(layout, 600, 400);
             purchaseHistoryStage.setScene(scene);
-            purchaseHistoryStage.setResizable(false); // 크기 조정 불가
             purchaseHistoryStage.show();
         });
-        
-        
-        
-        // 추천 책 영역 추가
-ListView<String> recommendationsListView = new ListView<>();
-AnchorPane.setTopAnchor(recommendationsListView, 350.0);
-AnchorPane.setLeftAnchor(recommendationsListView, 10.0);
-AnchorPane.setRightAnchor(recommendationsListView, 10.0);
-AnchorPane.setBottomAnchor(recommendationsListView, 10.0);
-
-mainPane.getChildren().addAll(recommendationsListView);
-
-        
-
 
         Scene scene = new Scene(mainPane);
         stage = new Stage();
         stage.setTitle("BookFlow");
         stage.setScene(scene);
         stage.setResizable(false);
-
     }
 
-    private void loadPurchaseHistoryAndRecommendations(
-        ListView<String> purchaseListView, 
-        ListView<String> recommendationsListView
-    ) {
-        // 구매 내역 초기화
+    private void loadPurchaseHistory(ListView<String> purchaseListView) {
         purchaseListView.getItems().clear();
-    
-        // 구매 내역 데이터베이스 쿼리
+
         String query = "SELECT oh.order_id, b.title, oh.quantity, oh.total_price, oh.order_date " +
-                       "FROM order_history oh " +
-                       "JOIN book b ON oh.book_id = b.book_id " +
-                       "WHERE oh.clientnumber = ? " +
-                       "ORDER BY oh.order_date DESC";
-    
-        // 구매 내역 로드
+                "FROM order_history oh " +
+                "JOIN book b ON oh.book_id = b.book_id " +
+                "WHERE oh.clientnumber = ? " +
+                "ORDER BY oh.order_date DESC";
+
         try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(query)) {
-    
-            statement.setInt(1, clientNumber); // 클라이언트 번호 설정
-    
+                PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, clientNumber);
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
                     int orderId = rs.getInt("order_id");
@@ -421,14 +388,9 @@ mainPane.getChildren().addAll(recommendationsListView);
                     int quantity = rs.getInt("quantity");
                     double totalPrice = rs.getDouble("total_price");
                     String orderDate = rs.getString("order_date");
-    
-                    // 구매 내역 텍스트 생성
-                    String itemText = String.format(
-                        "주문 번호: %d | 책: %s | 수량: %d | 총 가격: %.2f원 | 주문 날짜: %s",
-                        orderId, title, quantity, totalPrice, orderDate
-                    );
-    
-                    // 구매 내역 ListView에 추가
+
+                    String itemText = String.format("주문 번호: %d | 책: %s | 수량: %d | 총 가격: %.2f원 | 주문 날짜: %s",
+                            orderId, title, quantity, totalPrice, orderDate);
                     purchaseListView.getItems().add(itemText);
                 }
             }
@@ -436,67 +398,7 @@ mainPane.getChildren().addAll(recommendationsListView);
             e.printStackTrace();
             showAlert("오류", "구매 내역을 불러오는 데 실패했습니다.");
         }
-    
-        // 추천 책 로드
-        loadRecommendations(getGenresFromPurchaseHistory(), recommendationsListView);
     }
-    
-
-    private List<String> getGenresFromPurchaseHistory() {
-        List<String> genres = new ArrayList<>();
-    
-        String query = "SELECT DISTINCT b.genre " +
-                       "FROM order_history oh " +
-                       "JOIN book b ON oh.book_id = b.book_id " +
-                       "WHERE oh.clientnumber = ?";
-    
-        try (Connection connection = DBConnection.getConnection("bookflow_db");
-             PreparedStatement statement = connection.prepareStatement(query)) {
-    
-            statement.setInt(1, clientNumber);
-    
-            try (ResultSet rs = statement.executeQuery()) {
-                while (rs.next()) {
-                    genres.add(rs.getString("genre"));
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert("오류", "장르를 불러오는 데 실패했습니다.");
-        }
-    
-        return genres;
-    }
-    
-    private void loadRecommendations(List<String> genres, ListView<String> recommendationsListView) {
-        if (genres.isEmpty()) return; // 장르가 없으면 추천을 수행하지 않음
-    
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-    
-            // 서버에 장르 정보를 전달하여 추천 책 목록 가져오기
-            List<Book> recommendedBooks = restTemplate.getForObject(
-                serverUrl + "/recommendations?genres=" + String.join(",", genres), 
-                List.class
-            );
-    
-            // 추천 책 ListView 초기화
-            recommendationsListView.getItems().clear();
-    
-            // 추천 책 데이터를 ListView에 추가
-            for (Book book : recommendedBooks) {
-                String itemText = String.format(
-                    "책: %s | 저자: %s | 평점: %.1f", 
-                    book.getTitle(), book.getAuthor(), book.getRating()
-                );
-                recommendationsListView.getItems().add(itemText);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("오류", "추천 책을 불러오는 데 실패했습니다.");
-        }
-    }
-    
 
     private void loadBucketData(ListView<String> bucketListView) {
         bucketListView.getItems().clear(); // 기존 목록 비우기
@@ -559,16 +461,27 @@ mainPane.getChildren().addAll(recommendationsListView);
         return headerBox;
     }
 
-    private VBox createSuggestBox() {
-        VBox suggestBox = new VBox();
-        suggestBox.setPadding(new Insets(10));
+   private VBox createSuggestBox() {
+    VBox suggestBox = new VBox();
+    suggestBox.setPadding(new Insets(10));
 
-        Button sampleButton = new Button("추천");
+    Button recommendButton = new Button("추천");
 
-        suggestBox.getChildren().add(sampleButton);
-        suggestBox.setStyle("-fx-background-color: #e0e0e0;");
-        return suggestBox;
-    }
+    // Button Action: Fetch purchase history and recommend books
+    recommendButton.setOnAction(event -> {
+        PurchaseHistoryController historyController = new PurchaseHistoryController(clientNumber);
+        ArrayList<String> genres = historyController.getPurchasedGenres();
+        
+        RecommendationController recommendationController = new RecommendationController(clientNumber);
+        recommendationController.showRecommendationWindowWithGenres(genres);
+    });
+    
+
+    suggestBox.getChildren().add(recommendButton);
+    suggestBox.setStyle("-fx-background-color: #e0e0e0;");
+    return suggestBox;
+}
+
 
     private VBox createResultBox() {
         VBox resultBox = new VBox();
@@ -781,7 +694,7 @@ mainPane.getChildren().addAll(recommendationsListView);
                         String author = parts[2];
                         String genre = parts[3];
                         String price = parts[4];
-                        Double rating = Double.parseDouble(parts[5]);
+                        String rating = parts[5];
                         String stock = parts[6];
 
                         // HBox 레이아웃 생성
@@ -815,7 +728,7 @@ mainPane.getChildren().addAll(recommendationsListView);
 
                         // 클릭 시 상세 정보 창 열기
                         setOnMouseClicked(event -> {
-                            if (!empty && event.getClickCount() == 2) { // 두 번 클릭일 때만 실행
+                            if (!empty) {
                                 openBookDetailWindow(book_id, title, author, genre, price, rating);
                             }
                         });
@@ -833,7 +746,7 @@ mainPane.getChildren().addAll(recommendationsListView);
     }
 
     private void openBookDetailWindow(int book_id, String title, String author, String genre, String price,
-            Double rating) {
+            String rating) {
         ReviewController review = new ReviewController();
 
         // 새로운 Stage(창) 생성
@@ -854,7 +767,6 @@ mainPane.getChildren().addAll(recommendationsListView);
         // 리뷰 영역 (여기서는 더미 데이터를 사용)
         Label reviewTitle = new Label("리뷰:");
         ListView<Review> reviewListView = new ListView<>();
-        System.out.println("TEST1");
         ObservableList<Review> reviews = review.getReviewsForBook(book_id); // 해당 책의 리뷰 가져오기
         reviewListView.setItems(reviews);
 
@@ -869,6 +781,7 @@ mainPane.getChildren().addAll(recommendationsListView);
         // 창 보이기
         bookDetailStage.show();
     }
+    
 
     public void show() {
         String query = buildSearchQuery();

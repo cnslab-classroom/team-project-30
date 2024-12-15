@@ -7,6 +7,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.sql.*;
+import java.util.ArrayList;
 
 import com.example.util.DBConnection;
 
@@ -51,36 +52,41 @@ public class PurchaseHistoryController {
         historyStage.setResizable(false);
     }
 
-    private void loadPurchaseHistory(ListView<String> purchaseListView) {
-        purchaseListView.getItems().clear();
+  private ArrayList<String> purchasedGenres = new ArrayList<>();
 
-        // Query to get purchase history from the database
-        String query = "SELECT b.title, p.purchase_date, p.amount FROM purchase_history p " +
-                "JOIN book b ON p.book_id = b.book_id WHERE p.clientnumber = ?";
-        try (Connection connection = DBConnection.getConnection("bookflow_db")) {
-            // 1. Insert order into order_history
-            String insertOrderQuery = "INSERT INTO order_history (clientnumber, book_id, quantity, total_price) " +
-                    "SELECT bt.clientnumber, bt.book_id, bt.quantity, (bt.quantity * b.price) " +
-                    "FROM bucket bt " +
-                    "JOIN book b ON bt.book_id = b.book_id " +
-                    "WHERE bt.clientnumber = ?";
-            try (PreparedStatement orderStatement = connection.prepareStatement(insertOrderQuery)) {
-                orderStatement.setInt(1, clientNumber);
-                orderStatement.executeUpdate();
-            }
-
-            // 2. Clear bucket for the client
-            String clearBucketQuery = "DELETE FROM bucket WHERE clientnumber = ?";
-            try (PreparedStatement clearStatement = connection.prepareStatement(clearBucketQuery)) {
-                clearStatement.setInt(1, clientNumber);
-                clearStatement.executeUpdate();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert("오류", "구매 처리 중 오류가 발생했습니다.");
+private void loadPurchaseHistory(ListView<String> purchaseListView) {
+    purchaseListView.getItems().clear();
+    purchasedGenres.clear(); // Clear previous genres
+    
+    // Query to get purchase history along with genres
+    String query = "SELECT b.title, b.genre, p.purchase_date, p.amount " +
+                   "FROM purchase_history p " +
+                   "JOIN book b ON p.book_id = b.book_id " +
+                   "WHERE p.clientnumber = ?";
+    
+    try (Connection connection = DBConnection.getConnection("bookflow_db");
+         PreparedStatement statement = connection.prepareStatement(query)) {
+        statement.setInt(1, clientNumber);
+        ResultSet rs = statement.executeQuery();
+        
+        while (rs.next()) {
+            String title = rs.getString("title");
+            String genre = rs.getString("genre");
+            purchasedGenres.add(genre); // Collect genres
+            String purchaseInfo = title + " | " + rs.getString("purchase_date") + " | " + rs.getInt("amount");
+            purchaseListView.getItems().add(purchaseInfo);
         }
-
+    } catch (SQLException e) {
+        e.printStackTrace();
+        showAlert("오류", "구매 내역이 아직 없으신 분들에게는 평점이 높은 작품들을 추천해드립니다");
     }
+}
+
+// Getter for genres
+public ArrayList<String> getPurchasedGenres() {
+    return purchasedGenres;
+}
+
 
     private void handleReturnRequest(ListView<String> purchaseListView) {
         String selectedItem = purchaseListView.getSelectionModel().getSelectedItem();
