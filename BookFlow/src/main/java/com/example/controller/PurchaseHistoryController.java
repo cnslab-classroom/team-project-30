@@ -78,7 +78,7 @@ private void loadPurchaseHistory(ListView<String> purchaseListView) {
         }
     } catch (SQLException e) {
         e.printStackTrace();
-        showAlert("오류", "구매 내역이 아직 없으신 분들에게는 평점이 높은 작품들을 추천해드립니다");
+        showAlert("notice", "구매 내역의 양이 충분하지 않은 분들에게는 평점이 높은 작품들로 자동 추천됩니다");
     }
 }
 

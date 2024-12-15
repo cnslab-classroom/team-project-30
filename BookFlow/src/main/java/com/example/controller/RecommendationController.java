@@ -8,7 +8,6 @@ import javafx.stage.Stage;
 
 import java.sql.*;
 import java.util.ArrayList;
-
 import com.example.util.DBConnection;
 
 public class RecommendationController {
@@ -20,8 +19,24 @@ public class RecommendationController {
         this.clientNumber = clientNumber;
     }
 
+    public void showRecommendationWindowWithGenresFromPurchaseHistory() {
+        // Use PurchaseHistoryController to fetch genres from purchase history
+        PurchaseHistoryController purchaseHistoryController = new PurchaseHistoryController(clientNumber);
+        ArrayList<String> genres = purchaseHistoryController.getPurchasedGenres();
+
+        if (genres.isEmpty()) {
+            // No purchase history, fallback to high rating books
+            showRecommendationWindowWithGenres(new ArrayList<>());
+        } else {
+            // Keep only the genres of the 10 most recent purchases
+            if (genres.size() > 10) {
+                genres = new ArrayList<>(genres.subList(0, 10));
+            }
+            showRecommendationWindowWithGenres(genres);
+        }
+    }
+
     public void showRecommendationWindowWithGenres(ArrayList<String> genres) {
-        // Add logic to pass genres to the ListView recommendation process
         ListView<String> recommendationListView = new ListView<>();
         handleRecommendation(recommendationListView, genres);
 
