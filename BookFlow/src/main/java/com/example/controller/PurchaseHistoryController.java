@@ -59,10 +59,10 @@ private void loadPurchaseHistory(ListView<String> purchaseListView) {
     purchasedGenres.clear(); // Clear previous genres
     
     // Query to get purchase history along with genres
-    String query = "SELECT b.title, b.genre, p.purchase_date, p.amount " +
-                   "FROM purchase_history p " +
-                   "JOIN book b ON p.book_id = b.book_id " +
-                   "WHERE p.clientnumber = ?";
+    String query = "SELECT b.title, b.genre, oh.order_date, oh.quantity " +
+                   "FROM order_history oh " +
+                   "JOIN book b ON oh.book_id = b.book_id " +
+                   "WHERE oh.clientnumber = ?";
     
     try (Connection connection = DBConnection.getConnection("bookflow_db");
          PreparedStatement statement = connection.prepareStatement(query)) {
@@ -73,7 +73,7 @@ private void loadPurchaseHistory(ListView<String> purchaseListView) {
             String title = rs.getString("title");
             String genre = rs.getString("genre");
             purchasedGenres.add(genre); // Collect genres
-            String purchaseInfo = title + " | " + rs.getString("purchase_date") + " | " + rs.getInt("amount");
+            String purchaseInfo = title + " | " + rs.getString("order_date") + " | " + rs.getInt("quantity");
             purchaseListView.getItems().add(purchaseInfo);
         }
     } catch (SQLException e) {
