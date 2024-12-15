@@ -104,7 +104,7 @@ INSERT INTO book (title, author, genre, price, rating, stock) VALUES
 ('The Lost Treasure', 'Mark Twain', '판타지', 30000, 4.8, 10),
 ('Romance in Paris', 'Emily Brontë', '로맨스', 24000, 4.3, 25),
 ('Mystery of the Dark Woods', 'Agatha Christie', '미스터리', 33000, 4.7, 30),
-('The Haunted House', 'Stephen King', '공포', 20000, 4.6, 12),bucketbookclient
+('The Haunted House', 'Stephen King', '공포', 20000, 4.6, 12),
 ('History of the Ancient World', 'Herodotus', '역사', 20000, 4.1, 8),
 ('Youthful Dreams', 'Oscar Wilde', '청소년', 23000, 4.4, 22),
 ('Self-Development for Success', 'clientclientclientbooksTony Robbins', '자기계발', 28000, 4.9, 18),
