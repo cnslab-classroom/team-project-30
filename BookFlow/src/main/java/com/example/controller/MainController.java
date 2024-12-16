@@ -244,6 +244,61 @@ public class MainController {
         }
     }
 
+    private ListView<OrderedItem> purchaseListView = new ListView<>();
+
+    private void handleRefund(OrderedItem orderItem) {
+        double totalRefundAmount = orderItem.getTotalPrice();
+        int bookId = orderItem.getBookId();
+        int quantity = orderItem.getQuantity();
+
+        // DB 연결을 가져옴
+        try (Connection connection = DBConnection.getConnection("bookflow_db")) { // try-with-resources 문으로 연결 초기화
+            connection.setAutoCommit(false); // 트랜잭션 시작
+
+            // 재고 갱신
+            String updateStockQuery = "UPDATE book SET stock = stock + ? WHERE book_id = ?";
+            try (PreparedStatement stockStatement = connection.prepareStatement(updateStockQuery)) {
+                stockStatement.setInt(1, quantity); // 환불 수량만큼 재고 증가
+                stockStatement.setInt(2, bookId);
+                stockStatement.executeUpdate();
+            }
+
+            // 잔액 복구
+            String updateBalanceQuery = "UPDATE client SET balance = balance + ? WHERE clientnumber = ?";
+            try (PreparedStatement balanceStatement = connection.prepareStatement(updateBalanceQuery)) {
+                balanceStatement.setDouble(1, totalRefundAmount); // 환불 금액만큼 잔액 증가
+                balanceStatement.setInt(2, clientNumber);
+                balanceStatement.executeUpdate();
+            }
+
+            // 주문 삭제
+            String deleteOrderQuery = "DELETE FROM order_history WHERE order_id = ?";
+            try (PreparedStatement deleteStatement = connection.prepareStatement(deleteOrderQuery)) {
+                deleteStatement.setInt(1, orderItem.getOrderId());
+                deleteStatement.executeUpdate();
+            }
+
+            // 트랜잭션 커밋
+            connection.commit();
+
+            // UI 갱신
+            updateBalance(); // 잔액 UI 갱신
+            loadPurchaseHistory(purchaseListView); // 구매 내역 갱신
+
+            showAlert("환불 성공", "환불이 완료되었습니다!");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showAlert("오류", "환불 처리 중 오류가 발생했습니다.");
+            // 오류 발생 시 트랜잭션 롤백
+            try (Connection connection = DBConnection.getConnection("bookflow_db")) {
+                connection.rollback(); // 오류 발생 시 트랜잭션 롤백
+            } catch (SQLException rollbackException) {
+                rollbackException.printStackTrace();
+            }
+        }
+    }
+
     private void initialize() {
         AnchorPane mainPane = new AnchorPane();
         mainPane.setPrefSize(1200, 750);
@@ -358,7 +413,7 @@ public class MainController {
 
             VBox layout = new VBox(10);
             layout.setPadding(new Insets(10));
-            layout.getChildren().addAll(instructionLabel ,purchaseListView);
+            layout.getChildren().addAll(instructionLabel, purchaseListView);
 
             Scene scene = new Scene(layout, 600, 400);
             purchaseHistoryStage.setScene(scene);
@@ -368,10 +423,10 @@ public class MainController {
                 if (event.getClickCount() == 2) { // 더블클릭 시
                     OrderedItem selectedItem = purchaseListView.getSelectionModel().getSelectedItem();
                     int bookId = selectedItem.getBookId(); // 선택된 항목에서 책 ID 가져오기
-        
+
                     // ReviewController를 이용하여 해당 책에 리뷰가 존재하는지 확인
                     ReviewController reviewController = new ReviewController();
-        
+
                     if (!reviewController.isReviewExist(bookId, clientNumber)) {
                         // 리뷰 작성 창 띄우기
                         showReviewForm(bookId, clientNumber);
@@ -409,9 +464,25 @@ public class MainController {
                     int quantity = rs.getInt("quantity");
                     double totalPrice = rs.getDouble("total_price");
                     String orderDate = rs.getString("order_date");
-                    
+
                     OrderedItem orderItem = new OrderedItem(orderId, title, bookId, quantity, totalPrice, orderDate);
-                    purchaseListView.getItems().add(orderItem);
+
+                    // HBox 생성하여 주문 항목과 버튼을 포함
+                    HBox hbox = new HBox(10);
+                    hbox.setPadding(new Insets(5));
+
+                    // 주문 정보를 레이블로 표시
+                    Label orderLabel = new Label(orderItem.toString());
+
+                    // 환불 버튼 추가
+                    Button refundButton = new Button("환불");
+                    refundButton.setOnAction(event -> handleRefund(orderItem)); // 환불 처리
+
+                    // HBox에 레이블과 버튼 추가
+                    hbox.getChildren().addAll(orderLabel, refundButton);
+
+                    // ListView에 OrderedItem 추가 (버튼을 포함한 정보)
+                    purchaseListView.getItems().add(orderItem); // OrderedItem 객체는 여전히 ListView에 추가
                 }
             }
         } catch (SQLException e) {
@@ -424,37 +495,38 @@ public class MainController {
         // 리뷰 입력을 위한 새로운 윈도우 생성
         Stage reviewStage = new Stage();
         reviewStage.setTitle("리뷰 작성");
-    
+
         // 텍스트 필드와 평점 선택을 위한 UI 구성
         TextArea reviewContentArea = new TextArea();
         reviewContentArea.setPromptText("리뷰 내용을 입력하세요...");
         reviewContentArea.setWrapText(true);
-    
-        Spinner<Integer> ratingSpinner = new Spinner<>(1, 5, 3);  // 평점은 1부터 5까지, 기본 값은 3
+
+        Spinner<Integer> ratingSpinner = new Spinner<>(1, 5, 3); // 평점은 1부터 5까지, 기본 값은 3
         ratingSpinner.setEditable(true);
-        
+
         Button submitButton = new Button("리뷰 제출");
         submitButton.setOnAction(e -> {
             String reviewContent = reviewContentArea.getText();
             int rating = ratingSpinner.getValue();
-    
+
             // ReviewController의 addReview 메서드로 리뷰 추가
             ReviewController reviewController = new ReviewController();
             boolean isSuccess = reviewController.addReview(bookId, clientNumber, reviewContent, rating);
-    
+
             if (isSuccess) {
                 showAlert("성공", "리뷰가 성공적으로 작성되었습니다.");
-                reviewStage.close();  // 리뷰 작성 창 닫기
+                reviewStage.close(); // 리뷰 작성 창 닫기
             } else {
                 showAlert("실패", "리뷰 작성에 실패했습니다.");
             }
         });
-    
+
         // 레이아웃 설정
         VBox layout = new VBox(10);
         layout.setPadding(new Insets(10));
-        layout.getChildren().addAll(new Label("리뷰 내용:"), reviewContentArea, new Label("평점:"), ratingSpinner, submitButton);
-    
+        layout.getChildren().addAll(new Label("리뷰 내용:"), reviewContentArea, new Label("평점:"), ratingSpinner,
+                submitButton);
+
         Scene scene = new Scene(layout, 400, 300);
         reviewStage.setScene(scene);
         reviewStage.show();
@@ -521,27 +593,25 @@ public class MainController {
         return headerBox;
     }
 
-   private VBox createSuggestBox() {
-    VBox suggestBox = new VBox();
-    suggestBox.setPadding(new Insets(10));
+    private VBox createSuggestBox() {
+        VBox suggestBox = new VBox();
+        suggestBox.setPadding(new Insets(10));
 
-    Button recommendButton = new Button("추천");
+        Button recommendButton = new Button("추천");
 
-    // Button Action: Fetch purchase history and recommend books
-    recommendButton.setOnAction(event -> {
-        PurchaseHistoryController historyController = new PurchaseHistoryController(clientNumber);
-        ArrayList<String> genres = historyController.getPurchasedGenres();
-        
-        RecommendationController recommendationController = new RecommendationController(clientNumber);
-        recommendationController.showRecommendationWindowWithGenres(genres);
-    });
-    
+        // Button Action: Fetch purchase history and recommend books
+        recommendButton.setOnAction(event -> {
+            PurchaseHistoryController historyController = new PurchaseHistoryController(clientNumber);
+            ArrayList<String> genres = historyController.getPurchasedGenres();
 
-    suggestBox.getChildren().add(recommendButton);
-    suggestBox.setStyle("-fx-background-color: #e0e0e0;");
-    return suggestBox;
-}
+            RecommendationController recommendationController = new RecommendationController(clientNumber);
+            recommendationController.showRecommendationWindowWithGenres(genres);
+        });
 
+        suggestBox.getChildren().add(recommendButton);
+        suggestBox.setStyle("-fx-background-color: #e0e0e0;");
+        return suggestBox;
+    }
 
     private VBox createResultBox() {
         VBox resultBox = new VBox();
@@ -841,7 +911,6 @@ public class MainController {
         // 창 보이기
         bookDetailStage.show();
     }
-    
 
     public void show() {
         String query = buildSearchQuery();

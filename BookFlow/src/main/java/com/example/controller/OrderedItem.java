@@ -16,6 +16,22 @@ public class OrderedItem {
         this.totalPrice = totalPrice;
         this.orderDate = orderDate;
     }
+
+    // 책 제목 가져오기
+    public String getTitle() {
+        return title;
+    }
+
+    // 수량 가져오기
+    public int getQuantity() {
+        return quantity;
+    }
+
+    // 총 가격 가져오기
+    public double getTotalPrice() {
+        return totalPrice;
+    }
+
     public int getBookId() {
         return bookId;
     }
