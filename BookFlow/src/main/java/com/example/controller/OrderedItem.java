@@ -8,6 +8,7 @@ public class OrderedItem {
     private double totalPrice;
     private String orderDate;
 
+    // 기존 생성자
     public OrderedItem(int orderId, String title, int bookId, int quantity, double totalPrice, String orderDate) {
         this.orderId = orderId;
         this.title = title;
@@ -17,17 +18,20 @@ public class OrderedItem {
         this.orderDate = orderDate;
     }
 
-    // 책 제목 가져오기
+    // 주문 ID 반환하는 메서드 추가
+    public int getOrderId() {
+        return orderId;
+    }
+
+    // 나머지 getter 메서드들
     public String getTitle() {
         return title;
     }
 
-    // 수량 가져오기
     public int getQuantity() {
         return quantity;
     }
 
-    // 총 가격 가져오기
     public double getTotalPrice() {
         return totalPrice;
     }
